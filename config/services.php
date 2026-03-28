@@ -37,4 +37,14 @@ return [
         'api_secret' => env('CLOUDINARY_API_SECRET'),
     ],
 
+    'bakong' => [
+        'api_url' => env('BAKONG_API_URL', 'https://api-bakong.nbc.gov.kh'),
+        'token' => env('BAKONG_API_KEY'),
+        'merchant' => [
+            'bakong_id' => env('BAKONG_MERCHANT_ID', env('BAKONG_ACCOUNT_ID')),
+            'name' => env('BAKONG_MERCHANT_NAME', env('BAKONG_RECEIVER_NAME')),
+            'city' => env('BAKONG_MERCHANT_CITY', env('BAKONG_RECEIVER_CITY', 'PHNOM PENH')),
+            'acquiring_bank' => env('BAKONG_ACQUIRING_BANK'),
+        ],
+    ],
 ];

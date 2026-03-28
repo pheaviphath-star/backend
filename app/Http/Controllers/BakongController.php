@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Services\KHQRService;
 use KHQR\BakongKHQR;
-use KHQR\Helpers\KHQRData;
-use KHQR\Models\IndividualInfo;
 
 class BakongController extends Controller
 {
-    public function generateKhqr(Request $request): JsonResponse
+    public function generateKhqr(Request $request, KHQRService $khqrService): JsonResponse
     {
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
@@ -21,6 +20,7 @@ class BakongController extends Controller
             'receiver_name' => ['nullable', 'string'],
             'merchant_city' => ['nullable', 'string'],
             'receiver_city' => ['nullable', 'string'],
+            'expiration_timestamp' => ['nullable'],
         ]);
 
         $bakongAccountId = $validated['bakong_account_id']
@@ -58,24 +58,26 @@ class BakongController extends Controller
             ], 422);
         }
 
-        $khqrCurrency = $currency === 'KHR' ? KHQRData::CURRENCY_KHR : KHQRData::CURRENCY_USD;
+        $payload = [
+            'bakong_account_id' => $bakongAccountId,
+            'merchant_name' => $merchantName,
+            'merchant_city' => $merchantCity,
+            'currency' => $currency,
+            'amount' => (float) $validated['amount'],
+        ];
 
-        $individualInfo = new IndividualInfo(
-            bakongAccountID: $bakongAccountId,
-            merchantName: $merchantName,
-            merchantCity: $merchantCity,
-            currency: $khqrCurrency,
-            amount: (float) $validated['amount'],
-        );
+        if (isset($validated['expiration_timestamp'])) {
+            $payload['expiration_timestamp'] = $validated['expiration_timestamp'];
+        }
 
-        $result = BakongKHQR::generateIndividual($individualInfo);
-        $data = is_object($result) ? ($result->data ?? null) : null;
-        $qr = is_array($data) ? ($data['qr'] ?? null) : null;
-        $md5 = is_array($data) ? ($data['md5'] ?? null) : null;
+        $result = $khqrService->generateIndividualQR($payload);
+        $qr = $result['data']['qr'] ?? null;
+        $md5 = $result['data']['md5'] ?? null;
 
         if (!is_string($qr) || $qr === '') {
             return response()->json([
                 'message' => 'Failed to generate KHQR string.',
+                'error' => $result['error'] ?? null,
             ], 500);
         }
 
